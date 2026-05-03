@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>カード送信</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px;
+    }
+
+    h1 {
+      font-size: 18px;
+      color: #111;
+      margin-bottom: 24px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+    }
+
+    .card-preview {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.10);
+      width: 100%;
+      max-width: 360px;
+      overflow: hidden;
+      margin-bottom: 28px;
+    }
+
+    .card-header {
+      background: linear-gradient(135deg, #06C755 0%, #04a844 100%);
+      padding: 24px 20px 20px;
+      color: white;
+    }
+
+    .card-header .label {
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      opacity: 0.85;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+
+    .card-header .title {
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    .card-body {
+      padding: 20px;
+    }
+
+    .card-body .description {
+      font-size: 14px;
+      color: #444;
+      line-height: 1.7;
+      margin-bottom: 20px;
+    }
+
+    .card-btn {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      background: #06C755;
+      color: white;
+      text-align: center;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .send-btn {
+      width: 100%;
+      max-width: 360px;
+      padding: 16px;
+      background: #06C755;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(6,199,85,0.35);
+      transition: opacity 0.2s;
+    }
+
+    .send-btn:active { opacity: 0.8; }
+    .send-btn:disabled { background: #aaa; box-shadow: none; cursor: not-allowed; }
+
+    #status {
+      margin-top: 16px;
+      font-size: 13px;
+      color: #666;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>📤 カードを送信する</h1>
+
+  <!-- プレビュー -->
+  <div class="card-preview">
+    <div class="card-header">
+      <div class="label">お知らせ</div>
+      <div class="title">タイトルをここに入力</div>
+    </div>
+    <div class="card-body">
+      <div class="description">
+        本文テキストをここに入力します。<br>
+        友達や自分のトークルームに送れます。
+      </div>
+      <a class="card-btn" href="#">詳しくはこちら</a>
+    </div>
+  </div>
+
+  <button class="send-btn" id="sendBtn" disabled>読み込み中...</button>
+  <div id="status"></div>
+
+  <script>
+    const LIFF_ID = "1657147568-IEqYkVxo";
+
+    // ★ここを編集してカードの内容を変更できます★
+    const flexMessage = {
+      type: "flex",
+      altText: "カードが届きました",
+      contents: {
+        type: "bubble",
+        header: {
+          type: "box",
+          layout: "vertical",
+          contents: [
+            { type: "text", text: "お知らせ", size: "xs", color: "#ffffff99" },
+            { type: "text", text: "タイトルをここに入力", size: "xl", weight: "bold", color: "#ffffff", wrap: true }
+          ],
+          backgroundColor: "#06C755",
+          paddingAll: "20px"
+        },
+        body: {
+          type: "box",
+          layout: "vertical",
+          contents: [
+            {
+              type: "text",
+              text: "本文テキストをここに入力します。友達や自分のトークルームに送れます。",
+              wrap: true,
+              size: "sm",
+              color: "#444444"
+            }
+          ],
+          paddingAll: "20px"
+        },
+        footer: {
+          type: "box",
+          layout: "vertical",
+          contents: [
+            {
+              type: "button",
+              action: {
+                type: "uri",
+                label: "詳しくはこちら",
+                uri: "https://example.com"
+              },
+              style: "primary",
+              color: "#06C755"
+            }
+          ],
+          paddingAll: "16px"
+        }
+      }
+    };
+
+    liff.init({ liffId: LIFF_ID })
+      .then(() => {
+        const btn = document.getElementById("sendBtn");
+        btn.textContent = "友達を選んで送信する";
+        btn.disabled = false;
+
+        btn.addEventListener("click", async () => {
+          try {
+            const available = liff.isApiAvailable("shareTargetPicker");
+            if (!available) {
+              document.getElementById("status").textContent = "この環境ではShare Target Pickerが使えません。LINEアプリ内で開いてください。";
+              return;
+            }
+            const result = await liff.shareTargetPicker([flexMessage]);
+            if (result) {
+              document.getElementById("status").textContent = "✅ 送信しました！";
+            } else {
+              document.getElementById("status").textContent = "キャンセルされました。";
+            }
+          } catch (e) {
+            document.getElementById("status").textContent = "エラー: " + e.message;
+          }
+        });
+      })
+      .catch(e => {
+        document.getElementById("sendBtn").textContent = "初期化エラー";
+        document.getElementById("status").textContent = e.message;
+      });
+  </script>
+</body>
+</html>
