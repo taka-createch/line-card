@@ -7,7 +7,7 @@
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-
+ 
     body {
       font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif;
       background: #f0f4f8;
@@ -17,10 +17,10 @@
       align-items: center;
       padding: 24px 16px;
     }
-
+ 
     h1 { font-size: 18px; color: #111; margin-bottom: 8px; font-weight: 700; }
     .subtitle { font-size: 13px; color: #888; margin-bottom: 24px; }
-
+ 
     .carousel {
       display: flex;
       gap: 16px;
@@ -32,7 +32,7 @@
       margin-bottom: 28px;
     }
     .carousel::-webkit-scrollbar { display: none; }
-
+ 
     .card-preview {
       background: white;
       border-radius: 16px;
@@ -52,7 +52,7 @@
     .card-btn.primary   { background: #06C755; color: white; }
     .card-btn.secondary { background: white; color: #06C755; border: 2px solid #06C755; }
     .card-btn.share     { background: #f0f0f0; color: #555; }
-
+ 
     .error-box {
       background: #fff3f3;
       border: 1px solid #ffaaaa;
@@ -66,7 +66,7 @@
       max-width: 360px;
       margin-bottom: 20px;
     }
-
+ 
     .send-btn {
       width: calc(100% - 32px);
       max-width: 400px;
@@ -87,17 +87,17 @@
   </style>
 </head>
 <body>
-
+ 
   <h1>📤 カードを送信する</h1>
   <p class="subtitle">← スワイプしてカードを確認できます</p>
-
+ 
   <div class="carousel" id="carousel"></div>
   <button class="send-btn" id="sendBtn" disabled>読み込み中...</button>
   <div id="status"></div>
-
+ 
   <script>
     const LIFF_ID = "1657147568-IEqYkVxo"; // 変更不要
-
+ 
     // ============================================================
     // ★人ごとのカードデータをここに登録します★
     //
@@ -107,7 +107,7 @@
     // カードは複数枚（カルーセル）にも対応しています
     // ============================================================
     const CARD_DATA = {
-
+ 
       // ---------- 山田さん用 ----------
       yamada: {
         altText: "山田さんへのカードが届きました",
@@ -124,7 +124,7 @@
           },
         ],
       },
-
+ 
       // ---------- 鈴木さん用 ----------
       suzuki: {
         altText: "鈴木さんへのカードが届きました",
@@ -148,21 +148,21 @@
           },
         ],
       },
-
+ 
       // ---------- ここに追加 ----------
       // tanaka: {
       //   altText: "...",
       //   cards: [ { ... } ],
       // },
-
+ 
     };
     // ============================================================
-
+ 
     // URLパラメーターから card キーを取得
     const params = new URLSearchParams(window.location.search);
     const cardKey = params.get("card");
     const config = CARD_DATA[cardKey];
-
+ 
     // 該当するカードデータが無い場合はエラー表示
     if (!config) {
       document.getElementById("carousel").innerHTML = `
@@ -173,28 +173,28 @@
         </div>`;
       document.getElementById("sendBtn").textContent = "カードが見つかりません";
     } else {
-
+ 
       // プレビュー描画
       const carousel = document.getElementById("carousel");
       config.cards.forEach(card => {
         const div = document.createElement("div");
         div.className = "card-preview";
-
+ 
         const img = document.createElement("img");
         img.src = card.imageUrl;
         img.alt = card.title;
-
+ 
         const body = document.createElement("div");
         body.className = "card-body";
-
+ 
         const title = document.createElement("div");
         title.className = "card-title";
         title.textContent = card.title;
-
+ 
         const text = document.createElement("div");
         text.className = "card-text";
         text.textContent = card.bodyText;
-
+ 
         const btnList = document.createElement("div");
         btnList.className = "btn-list";
         card.buttons.forEach(btn => {
@@ -205,7 +205,7 @@
           if (btn.style !== "share") a.target = "_blank";
           btnList.appendChild(a);
         });
-
+ 
         body.appendChild(title);
         body.appendChild(text);
         body.appendChild(btnList);
@@ -214,7 +214,7 @@
         carousel.appendChild(div);
       });
     }
-
+ 
     // Flex Messageのバブル生成
     function buildBubble(card) {
       return {
@@ -255,7 +255,7 @@
         },
       };
     }
-
+ 
     function buildFlexMessage() {
       return {
         type: "flex",
@@ -263,7 +263,7 @@
         contents: { type: "carousel", contents: config.cards.map(buildBubble) },
       };
     }
-
+ 
     // LIFF初期化
     liff.init({ liffId: LIFF_ID })
       .then(() => {
@@ -271,7 +271,7 @@
         if (!config) return;
         btn.textContent = "友達を選んで送信する";
         btn.disabled = false;
-
+ 
         btn.addEventListener("click", async () => {
           try {
             if (!liff.isApiAvailable("shareTargetPicker")) {
