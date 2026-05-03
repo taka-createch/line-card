@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>カード送信</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px;
+    }
+
+    h1 { font-size: 18px; color: #111; margin-bottom: 8px; font-weight: 700; }
+    .subtitle { font-size: 13px; color: #888; margin-bottom: 24px; }
+
+    .carousel {
+      display: flex;
+      gap: 16px;
+      overflow-x: auto;
+      width: 100%;
+      padding: 0 16px 16px;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      margin-bottom: 28px;
+    }
+    .carousel::-webkit-scrollbar { display: none; }
+
+    .card-preview {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.10);
+      min-width: 280px;
+      max-width: 280px;
+      overflow: hidden;
+      scroll-snap-align: start;
+      flex-shrink: 0;
+    }
+    .card-preview img { width: 100%; height: 160px; display: block; object-fit: cover; }
+    .card-body { padding: 16px; }
+    .card-title { font-size: 16px; font-weight: 700; color: #111; margin-bottom: 8px; }
+    .card-text { font-size: 13px; color: #444; line-height: 1.6; margin-bottom: 16px; }
+    .btn-list { display: flex; flex-direction: column; gap: 8px; }
+    .card-btn { display: block; width: 100%; padding: 10px; text-align: center; border-radius: 8px; font-size: 13px; font-weight: 600; text-decoration: none; }
+    .card-btn.primary   { background: #06C755; color: white; }
+    .card-btn.secondary { background: white; color: #06C755; border: 2px solid #06C755; }
+    .card-btn.share     { background: #f0f0f0; color: #555; }
+
+    .error-box {
+      background: #fff3f3;
+      border: 1px solid #ffaaaa;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      color: #cc0000;
+      font-size: 14px;
+      line-height: 1.7;
+      width: 100%;
+      max-width: 360px;
+      margin-bottom: 20px;
+    }
+
+    .send-btn {
+      width: calc(100% - 32px);
+      max-width: 400px;
+      padding: 16px;
+      background: #06C755;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(6,199,85,0.35);
+      transition: opacity 0.2s;
+    }
+    .send-btn:active   { opacity: 0.8; }
+    .send-btn:disabled { background: #aaa; box-shadow: none; cursor: not-allowed; }
+    #status { margin-top: 16px; font-size: 13px; color: #666; text-align: center; }
+  </style>
+</head>
+<body>
+
+  <h1>📤 カードを送信する</h1>
+  <p class="subtitle">← スワイプしてカードを確認できます</p>
+
+  <div class="carousel" id="carousel"></div>
+  <button class="send-btn" id="sendBtn" disabled>読み込み中...</button>
+  <div id="status"></div>
+
+  <script>
+    const LIFF_ID = "1657147568-IEqYkVxo"; // 変更不要
+
+    // ============================================================
+    // ★人ごとのカードデータをここに登録します★
+    //
+    // URLの末尾に ?card=キー名 を付けて呼び出します
+    // 例: https://liff.line.me/xxxx?card=yamada
+    //
+    // カードは複数枚（カルーセル）にも対応しています
+    // ============================================================
+    const CARD_DATA = {
+
+      // ---------- 山田さん用 ----------
+      yamada: {
+        altText: "山田さんへのカードが届きました",
+        cards: [
+          {
+            imageUrl: "https://example.com/yamada1.jpg",
+            title:    "山田さん専用タイトル",
+            bodyText: "山田さん向けの本文テキストです。",
+            buttons: [
+              { label: "サイトを見る",    url: "https://example.com/yamada",  style: "primary"   },
+              { label: "予約する",        url: "https://example.com/reserve", style: "primary"   },
+              { label: "📤 友達に転送する",                                   style: "share"     },
+            ],
+          },
+        ],
+      },
+
+      // ---------- 鈴木さん用 ----------
+      suzuki: {
+        altText: "鈴木さんへのカードが届きました",
+        cards: [
+          {
+            imageUrl: "https://example.com/suzuki1.jpg",
+            title:    "鈴木さん専用タイトル",
+            bodyText: "鈴木さん向けの本文テキストです。",
+            buttons: [
+              { label: "詳しくはこちら", url: "https://example.com/suzuki", style: "primary" },
+              { label: "📤 友達に転送する",                                 style: "share"   },
+            ],
+          },
+          {
+            imageUrl: "https://example.com/suzuki2.jpg",
+            title:    "鈴木さん用カード2枚目",
+            bodyText: "カードは複数枚にもできます。",
+            buttons: [
+              { label: "お問い合わせ", url: "https://example.com/contact", style: "secondary" },
+            ],
+          },
+        ],
+      },
+
+      // ---------- ここに追加 ----------
+      // tanaka: {
+      //   altText: "...",
+      //   cards: [ { ... } ],
+      // },
+
+    };
+    // ============================================================
+
+    // URLパラメーターから card キーを取得
+    const params = new URLSearchParams(window.location.search);
+    const cardKey = params.get("card");
+    const config = CARD_DATA[cardKey];
+
+    // 該当するカードデータが無い場合はエラー表示
+    if (!config) {
+      document.getElementById("carousel").innerHTML = `
+        <div class="error-box">
+          URLが正しくありません。<br>
+          <strong>?card=名前</strong> をURLの末尾につけてください。<br><br>
+          例）...?card=yamada
+        </div>`;
+      document.getElementById("sendBtn").textContent = "カードが見つかりません";
+    } else {
+
+      // プレビュー描画
+      const carousel = document.getElementById("carousel");
+      config.cards.forEach(card => {
+        const div = document.createElement("div");
+        div.className = "card-preview";
+
+        const img = document.createElement("img");
+        img.src = card.imageUrl;
+        img.alt = card.title;
+
+        const body = document.createElement("div");
+        body.className = "card-body";
+
+        const title = document.createElement("div");
+        title.className = "card-title";
+        title.textContent = card.title;
+
+        const text = document.createElement("div");
+        text.className = "card-text";
+        text.textContent = card.bodyText;
+
+        const btnList = document.createElement("div");
+        btnList.className = "btn-list";
+        card.buttons.forEach(btn => {
+          const a = document.createElement("a");
+          a.textContent = btn.label;
+          a.className = `card-btn ${btn.style}`;
+          a.href = btn.style === "share" ? "#" : btn.url;
+          if (btn.style !== "share") a.target = "_blank";
+          btnList.appendChild(a);
+        });
+
+        body.appendChild(title);
+        body.appendChild(text);
+        body.appendChild(btnList);
+        div.appendChild(img);
+        div.appendChild(body);
+        carousel.appendChild(div);
+      });
+    }
+
+    // Flex Messageのバブル生成
+    function buildBubble(card) {
+      return {
+        type: "bubble",
+        hero: {
+          type: "image",
+          url: card.imageUrl,
+          size: "full",
+          aspectRatio: "20:13",
+          aspectMode: "cover",
+        },
+        body: {
+          type: "box",
+          layout: "vertical",
+          contents: [
+            { type: "text", text: card.title,    size: "lg", weight: "bold", color: "#111111", wrap: true },
+            { type: "text", text: card.bodyText, size: "sm", color: "#444444", wrap: true, margin: "md" },
+          ],
+          paddingAll: "20px",
+        },
+        footer: {
+          type: "box",
+          layout: "vertical",
+          contents: card.buttons.map((btn, i) => {
+            if (btn.style === "share") {
+              return { type: "button", action: { type: "share" }, style: "secondary", margin: i === 0 ? "none" : "sm", label: btn.label };
+            }
+            return {
+              type: "button",
+              action: { type: "uri", label: btn.label, uri: btn.url },
+              style: btn.style === "primary" ? "primary" : "secondary",
+              color: btn.style === "primary" ? "#06C755" : undefined,
+              margin: i === 0 ? "none" : "sm",
+            };
+          }),
+          paddingAll: "16px",
+          gap: "sm",
+        },
+      };
+    }
+
+    function buildFlexMessage() {
+      return {
+        type: "flex",
+        altText: config.altText,
+        contents: { type: "carousel", contents: config.cards.map(buildBubble) },
+      };
+    }
+
+    // LIFF初期化
+    liff.init({ liffId: LIFF_ID })
+      .then(() => {
+        const btn = document.getElementById("sendBtn");
+        if (!config) return;
+        btn.textContent = "友達を選んで送信する";
+        btn.disabled = false;
+
+        btn.addEventListener("click", async () => {
+          try {
+            if (!liff.isApiAvailable("shareTargetPicker")) {
+              document.getElementById("status").textContent = "LINEアプリ内で開いてください。";
+              return;
+            }
+            const result = await liff.shareTargetPicker([buildFlexMessage()]);
+            document.getElementById("status").textContent = result ? "✅ 送信しました！" : "キャンセルされました。";
+          } catch (e) {
+            document.getElementById("status").textContent = "エラー: " + e.message;
+          }
+        });
+      })
+      .catch(e => {
+        document.getElementById("sendBtn").textContent = "初期化エラー";
+        document.getElementById("status").textContent = e.message;
+      });
+  </script>
+</body>
+</html>
